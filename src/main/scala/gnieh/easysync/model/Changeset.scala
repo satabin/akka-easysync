@@ -64,6 +64,13 @@ final case class Changeset[T](from: Int, chars: Seq[Characters[T]]) {
 
 }
 
+object Changeset {
+
+  def empty[T]: Changeset[T] =
+    identity(0)
+
+}
+
 sealed trait Characters[+T] {
   def size: Int
   def take(n: Int): Characters[T]

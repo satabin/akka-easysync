@@ -12,12 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gnieh.easysync.model
+package gnieh.easysync
+package model
 
-final case class Document[T](characters: Seq[T])
+import scala.reflect.ClassTag
 
-object Document {
+final case class NewChangeset(changeset: Changeset[Char])
 
-  def empty[T]: Document[T] = Document(Seq())
+final case class HeadRevision(rev: Int, doc: Document[Char])
 
-}
+final case class DocumentRevision(changeset: Changeset[Char], author: String)
+
+case object Connect
+
+case object Ack

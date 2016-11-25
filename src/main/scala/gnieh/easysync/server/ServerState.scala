@@ -12,12 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gnieh.easysync.model
+package gnieh.easysync
+package server
 
-final case class Document[T](characters: Seq[T])
+import model._
 
-object Document {
-
-  def empty[T]: Document[T] = Document(Seq())
-
-}
+private final case class ServerState(document: Document[Char], revision: Int)

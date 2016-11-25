@@ -19,7 +19,10 @@ import scala.annotation.tailrec
 package object model {
 
   def identity[T](n: Int): Changeset[T] =
-    Changeset(n, Seq(Range(0, n)))
+    if (n > 0)
+      Changeset(n, Seq(Range(0, n)))
+    else
+      Changeset(0, Seq())
 
   def follow[T](a: Changeset[T], b: Changeset[T]): Changeset[T] = {
     if (a.from != b.from) {
