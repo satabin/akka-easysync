@@ -88,7 +88,7 @@ package object model {
           acc
       }
 
-    Changeset(a.to, loop(0, a.chars, b.chars, Nil))
+    Changeset(a.to, loop(0, a.chars, b.chars, Nil)).compact
   }
 
 }

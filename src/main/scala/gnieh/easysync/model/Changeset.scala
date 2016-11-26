@@ -56,7 +56,46 @@ final case class Changeset[T](from: Int, chars: Seq[Characters[T]]) {
       case Range(from, until) => this.slice(from, until)
       case Sequence(cs)       => Seq(Sequence(cs))
     }
-    Changeset(this.from, chars1)
+    Changeset(this.from, chars1).compact
+  }
+
+  def compact: Changeset[T] = {
+
+    @tailrec
+    def loop(chars: Seq[Characters[T]], lastChar: Option[Characters[T]], acc: Seq[Characters[T]]): Seq[Characters[T]] =
+      chars match {
+        case Seq() =>
+          // done
+          lastChar match {
+            case Some(c) => acc :+ c
+            case None    => acc
+          }
+        case Seq(r @ Range(start1, end1), rest @ _*) =>
+          lastChar match {
+            case Some(Range(start2, end2)) if end2 == start1 =>
+              // merge adjacent ranges
+              loop(rest, Some(Range(start2, end1)), acc)
+            case Some(c) =>
+              // some other character, add it to the accumulator and replace with current range
+              loop(rest, Some(r), acc :+ c)
+            case None =>
+              loop(rest, Some(r), acc)
+          }
+        case Seq(s @ Sequence(s1), rest @ _*) =>
+          lastChar match {
+            case Some(Sequence(s2)) =>
+              // merge both sequences
+              val s3 = Sequence(s2 ++ s1)
+              loop(rest, Some(s3), acc)
+            case Some(c) =>
+              // some other character, add it to the accumulator and replace with current sequence
+              loop(rest, Some(s), acc :+ c)
+            case None =>
+              loop(rest, Some(s), acc)
+          }
+      }
+
+    Changeset(from, loop(chars, None, Nil))
   }
 
   override def toString() =
