@@ -27,6 +27,10 @@ import com.typesafe.config.ConfigFactory
 
 /** The client is only responsible for synchronization between server and view.
  *  It receives updates from both and notifies the view when changes come from the server.
+ *
+ *  The client sends changesets to the `view` when it is connected and when
+ *  changes are received from the server from other clients.
+ *  It is up to the `view` to treat these changeset (updating their content, caret position, ...)
  */
 class Client[C: ClassTag](view: ActorRef, server: ActorRef) extends Actor {
 
@@ -47,19 +51,20 @@ class Client[C: ClassTag](view: ActorRef, server: ActorRef) extends Actor {
     case HeadRevision(rev, documentTag(doc)) =>
       // we are now connected
 
-      view ! doc
+      val changeset = Changeset.fromDocument(doc)
+      view ! changeset
 
-      context.become(connected(Changeset.fromDocument(doc), identity(doc.size), identity(doc.size), doc))
+      context.become(connected(changeset, identity(doc.size), identity(doc.size)))
 
   }
 
-  def connected(acknowledged: Changeset[C], unacknowledged: Changeset[C], local: Changeset[C], viewdoc: Document[C]): Receive = {
+  def connected(acknowledged: Changeset[C], unacknowledged: Changeset[C], local: Changeset[C]): Receive = {
 
     case LocalEdit(changesetTag(cs)) =>
       // receive a new local edit from the view
       val local1 = local.andThen(cs)
 
-      context.become(connected(acknowledged, unacknowledged, local1, local1(viewdoc)))
+      context.become(connected(acknowledged, unacknowledged, local1))
 
     case Submit =>
       // submit new changeset to the server if no unacknowledged changes are pending
@@ -70,7 +75,7 @@ class Client[C: ClassTag](view: ActorRef, server: ActorRef) extends Actor {
 
           server ! NewChangeset(local)
 
-          context.become(connected(acknowledged, local, identity(local.to), viewdoc))
+          context.become(connected(acknowledged, local, identity(local.to)))
 
         }
       }
@@ -78,7 +83,7 @@ class Client[C: ClassTag](view: ActorRef, server: ActorRef) extends Actor {
     case Ack =>
       // server acknowledges the sent changeset
       val acknowledged1 = acknowledged.andThen(unacknowledged)
-      context.become(connected(acknowledged1, identity(acknowledged1.to), local, viewdoc))
+      context.become(connected(acknowledged1, identity(acknowledged1.to), local))
 
     case DocumentRevision(changesetTag(changeset), author) =>
       // hear about another client’s changeset
@@ -88,11 +93,9 @@ class Client[C: ClassTag](view: ActorRef, server: ActorRef) extends Actor {
 
       val viewcs = follow(local, follow(unacknowledged, changeset))
 
-      val viewdoc1 = viewcs(viewdoc)
+      view ! viewcs
 
-      view ! viewdoc1
-
-      context.become(connected(acknowledged1, unacknowledged1, local1, viewdoc1))
+      context.become(connected(acknowledged1, unacknowledged1, local1))
 
     case Stop =>
 
