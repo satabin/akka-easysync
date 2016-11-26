@@ -43,7 +43,7 @@ final case class Changeset[T](from: Int, chars: Seq[Characters[T]]) {
       throw new SyncException(f"This changeset applies to documents of size ${this.from} but trying to apply to a document of size ${d.characters.size}")
     }
     Document(chars.foldLeft(Seq.empty[T]) {
-      case (acc, Range(start, end)) => acc ++ d.characters.slice(start, end)
+      case (acc, Range(start, end)) => acc ++ d.characters.view(start, end)
       case (acc, Sequence(s))       => acc ++ s
     })
   }

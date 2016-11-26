@@ -90,13 +90,13 @@ class Server(projectId: String, docId: String) extends PersistentActor {
 
   }
 
-  val receiveRecover: Receive = recovering(Document.empty, Vector(DocumentRevision(Changeset.empty, "")), 0)
+  val receiveRecover: Receive = recovering(Document.empty, Vector.empty, 0)
 
   def recovering(head: Document[Char], revisions: Vector[DocumentRevision], minRev: Int): Receive = {
     case msg @ (Connect | NewChangeset(_)) =>
       stash()
     case SnapshotOffer(_, ServerState(document, revision)) =>
-      context.become(recovering(document, Vector(DocumentRevision(Changeset(0, Seq(Sequence(document.characters))), "")), revision))
+      context.become(recovering(document, Vector.empty, revision))
     case rev @ DocumentRevision(cs, _) =>
       context.become(recovering(cs(head), revisions :+ rev, minRev))
     case RecoveryCompleted =>
@@ -104,6 +104,6 @@ class Server(projectId: String, docId: String) extends PersistentActor {
       context.become(started(Map.empty, head, revisions, minRev))
   }
 
-  val receiveCommand: Receive = started(Map.empty, Document.empty, Vector(DocumentRevision(Changeset.empty, "")), 0)
+  val receiveCommand: Receive = started(Map.empty, Document.empty, Vector.empty, 0)
 
 }
