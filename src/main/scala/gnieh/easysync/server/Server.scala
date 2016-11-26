@@ -20,14 +20,20 @@ import model._
 import akka.actor._
 import akka.persistence._
 
+import scala.reflect.ClassTag
+
 /** The server class represents the server side of a synchronized document.
  *  It reacts to client commands and is able to persist its state on demand.
  */
-class Server(projectId: String, docId: String) extends PersistentActor {
+class Server[C: ClassTag](projectId: String, docId: String) extends PersistentActor {
 
   def persistenceId = f"akka-easysync:$projectId:$docId"
 
-  def started(clients: Map[ActorPath, Int], head: Document[Char], revisions: Vector[DocumentRevision], minRev: Int): Receive = {
+  val changesetTag = implicitly[ClassTag[Changeset[C]]]
+  val documentTag = implicitly[ClassTag[Document[C]]]
+  val revisionTag = implicitly[ClassTag[DocumentRevision[C]]]
+
+  def started(clients: Map[ActorPath, Int], head: Document[C], revisions: Vector[DocumentRevision[C]], minRev: Int): Receive = {
 
     case Connect =>
 
@@ -48,7 +54,7 @@ class Server(projectId: String, docId: String) extends PersistentActor {
 
       saveSnapshot(ServerState(head, revisions.size + minRev))
 
-    case NewChangeset(changeset) =>
+    case NewChangeset(changesetTag(changeset)) =>
       clients.get(sender.path) match {
         case Some(clientRev) =>
 
@@ -107,12 +113,12 @@ class Server(projectId: String, docId: String) extends PersistentActor {
 
   val receiveRecover: Receive = recovering(Document.empty, Vector.empty, 0)
 
-  def recovering(head: Document[Char], revisions: Vector[DocumentRevision], minRev: Int): Receive = {
+  def recovering(head: Document[C], revisions: Vector[DocumentRevision[C]], minRev: Int): Receive = {
     case msg @ (Connect | NewChangeset(_)) =>
       stash()
-    case SnapshotOffer(_, ServerState(document, revision)) =>
+    case SnapshotOffer(_, ServerState(documentTag(document), revision)) =>
       context.become(recovering(document, Vector.empty, revision))
-    case rev @ DocumentRevision(cs, _) =>
+    case revisionTag(rev @ DocumentRevision(cs, _)) =>
       context.become(recovering(cs(head), revisions :+ rev, minRev))
     case RecoveryCompleted =>
       unstashAll()

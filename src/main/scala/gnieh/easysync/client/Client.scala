@@ -21,12 +21,17 @@ import akka.actor._
 
 import scala.concurrent.duration.Duration
 
+import scala.reflect.ClassTag
+
 import com.typesafe.config.ConfigFactory
 
 /** The client is only responsible for synchronization between server and view.
  *  It receives updates from both and notifies the view when changes come from the server.
  */
-class Client(view: ActorRef, server: ActorRef) extends Actor {
+class Client[C: ClassTag](view: ActorRef, server: ActorRef) extends Actor {
+
+  val changesetTag = implicitly[ClassTag[Changeset[C]]]
+  val documentTag = implicitly[ClassTag[Document[C]]]
 
   def receive = connecting()
 
@@ -39,7 +44,7 @@ class Client(view: ActorRef, server: ActorRef) extends Actor {
 
   def connecting(): Receive = {
 
-    case HeadRevision(rev, doc) =>
+    case HeadRevision(rev, documentTag(doc)) =>
       // we are now connected
 
       view ! doc
@@ -48,9 +53,9 @@ class Client(view: ActorRef, server: ActorRef) extends Actor {
 
   }
 
-  def connected(acknowledged: Changeset[Char], unacknowledged: Changeset[Char], local: Changeset[Char], viewdoc: Document[Char]): Receive = {
+  def connected(acknowledged: Changeset[C], unacknowledged: Changeset[C], local: Changeset[C], viewdoc: Document[C]): Receive = {
 
-    case LocalEdit(cs) =>
+    case LocalEdit(changesetTag(cs)) =>
       // receive a new local edit from the view
       val local1 = local.andThen(cs)
 
@@ -75,7 +80,7 @@ class Client(view: ActorRef, server: ActorRef) extends Actor {
       val acknowledged1 = acknowledged.andThen(unacknowledged)
       context.become(connected(acknowledged1, identity(acknowledged1.to), local, viewdoc))
 
-    case DocumentRevision(changeset, author) =>
+    case DocumentRevision(changesetTag(changeset), author) =>
       // hear about another client’s changeset
       val acknowledged1 = acknowledged.andThen(changeset)
       val unacknowledged1 = follow(changeset, unacknowledged)

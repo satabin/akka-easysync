@@ -17,4 +17,4 @@ package server
 
 import model._
 
-private final case class ServerState(document: Document[Char], revision: Int)
+private final case class ServerState[C](document: Document[C], revision: Int)

@@ -21,19 +21,19 @@ import scala.reflect.ClassTag
  *
  *  @group Request
  */
-final case class NewChangeset(changeset: Changeset[Char])
+final case class NewChangeset[C](changeset: Changeset[C])
 
 /** The current head revision of the document.
  *
  *  @group Response
  */
-final case class HeadRevision(rev: Int, doc: Document[Char])
+final case class HeadRevision[C](rev: Int, doc: Document[C])
 
 /** A new document revision with changes and author information.
  *
  *  @group Response
  */
-final case class DocumentRevision(changeset: Changeset[Char], author: String)
+final case class DocumentRevision[C](changeset: Changeset[C], author: String)
 
 /** Connect to the server. Expects a [[HeadRevision]] as response.
  *
