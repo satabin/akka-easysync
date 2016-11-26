@@ -97,6 +97,12 @@ class Server(projectId: String, docId: String) extends PersistentActor {
         // this client is not connected, just ignore its message
       }
 
+    case Stop =>
+
+      saveSnapshot(ServerState(head, revisions.size + minRev))
+
+      context.stop(self)
+
   }
 
   val receiveRecover: Receive = recovering(Document.empty, Vector.empty, 0)

@@ -108,6 +108,10 @@ object Changeset {
   def empty[T]: Changeset[T] =
     identity(0)
 
+  /** Creates a changeset from the empty document to the provided `doc`. */
+  def fromDocument[T](doc: Document[T]): Changeset[T] =
+    Changeset(0, Seq(Sequence(doc.characters)))
+
 }
 
 sealed trait Characters[+T] {

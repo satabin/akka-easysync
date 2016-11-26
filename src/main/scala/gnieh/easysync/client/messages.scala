@@ -12,16 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package gnieh.easysync.model
+package gnieh.easysync
+package client
 
-final case class Document[T](characters: Seq[T]) {
+import model._
 
-  def size = characters.size
+/** Internal message used to ask the client for submitting its changes. */
+case object Submit
 
-}
-
-object Document {
-
-  def empty[T]: Document[T] = Document(Seq())
-
-}
+/** Send new local edits to the client. */
+case class LocalEdit(changeset: Changeset[Char])

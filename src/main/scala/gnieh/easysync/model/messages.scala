@@ -58,3 +58,6 @@ case object Save
  *  @group Response
  */
 case object Ack
+
+/** Require the client or server to stop and cleanup its state */
+case object Stop
