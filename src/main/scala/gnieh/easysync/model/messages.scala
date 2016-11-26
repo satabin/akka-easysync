@@ -17,12 +17,44 @@ package model
 
 import scala.reflect.ClassTag
 
+/** Send a new changeset to the server. Expects a [[Ack]] as response.
+ *
+ *  @group Request
+ */
 final case class NewChangeset(changeset: Changeset[Char])
 
+/** The current head revision of the document.
+ *
+ *  @group Response
+ */
 final case class HeadRevision(rev: Int, doc: Document[Char])
 
+/** A new document revision with changes and author information.
+ *
+ *  @group Response
+ */
 final case class DocumentRevision(changeset: Changeset[Char], author: String)
 
+/** Connect to the server. Expects a [[HeadRevision]] as response.
+ *
+ *  @group Request
+ */
 case object Connect
 
+/** Disconnect from the server. Expects no response.
+ *
+ *  @group Request
+ */
+case object Disconnect
+
+/** Request the document to be saved to store. Expects no response.
+ *
+ *  @group Request
+ */
+case object Save
+
+/** Server acknowlegment of received changeset.
+ *
+ *  @group Response
+ */
 case object Ack

@@ -20,6 +20,9 @@ import model._
 import akka.actor._
 import akka.persistence._
 
+/** The server class represents the server side of a synchronized document.
+ *  It reacts to client commands and is able to persist its state on demand.
+ */
 class Server(projectId: String, docId: String) extends PersistentActor {
 
   def persistenceId = f"akka-easysync:$projectId:$docId"
@@ -36,12 +39,18 @@ class Server(projectId: String, docId: String) extends PersistentActor {
       // add the client to the map with its last know revision
       context.become(started(clients.updated(sender.path, rev), head, revisions, minRev))
 
+    case Disconnect =>
+
+      // remove the client from the list of connected clients
+      context.become(started(clients - sender.path, head, revisions, minRev))
+
+    case Save =>
+
+      saveSnapshot(ServerState(head, revisions.size + minRev))
+
     case NewChangeset(changeset) =>
       clients.get(sender.path) match {
         case Some(clientRev) =>
-
-          // capture the sender to be used in the callback
-          val s = sender
 
           // compute the changeset in the context of the current revision
           // first retrieve the last known changeset
@@ -56,16 +65,16 @@ class Server(projectId: String, docId: String) extends PersistentActor {
                   follow(c, changeset1)
               }
 
-          val rev = DocumentRevision(changeset, s.path.name)
+          // create the revision out of sender and changeset
+          val rev = DocumentRevision(changeset, sender.path.name)
 
           // persist the changeset event
           persistAsync(rev) { rev =>
-            // create the revision out of sender and changeset
 
             // notify the other clients about this new revision and get the mimimum revision
             val minRev1 = clients.foldLeft(Int.MaxValue) {
               case (min, (p, r)) =>
-                if (p != s.path)
+                if (p != sender.path)
                   context.actorSelection(p) ! rev
                 math.min(min, r)
             }
@@ -79,9 +88,9 @@ class Server(projectId: String, docId: String) extends PersistentActor {
               }
 
             // send ack to the original sender
-            s ! Ack
+            sender ! Ack
 
-            context.become(started(clients.updated(s.path, revisions1.size + minRev1 + 1), changeset(head), revisions1 :+ rev, minRev1))
+            context.become(started(clients.updated(sender.path, revisions1.size + minRev1 + 1), changeset(head), revisions1 :+ rev, minRev1))
           }
 
         case None =>
